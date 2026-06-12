@@ -13,6 +13,7 @@
     <h1 class="logo">📖 DailyDose</h1>
     <div class="topbar-actions">
       <button class="btn-icon" id="btnHistory" title="历史记录">📋</button>
+      <button class="btn-icon" id="btnVocabBook" title="生词本">📝</button>
       <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
     </div>
   </header>
@@ -170,11 +171,29 @@
     </div>
   </aside>
 
+  <!-- ═══ 生词本抽屉 ═══ -->
+  <div class="drawer-overlay hidden" id="vocabOverlay"></div>
+  <aside class="vocab-drawer" id="vocabDrawer">
+    <div class="drawer-header">
+      <h2>📝 生词本</h2>
+      <span class="drawer-count" id="vocabCount">0 词</span>
+      <button class="btn-icon drawer-close" id="vocabClose">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-empty" id="vocabEmpty">
+        <p>暂无生词</p>
+        <p class="hint">右键点击文章中的单词或短语，选择「添加到生词本」</p>
+      </div>
+      <ul class="vocab-list hidden" id="vocabList"></ul>
+    </div>
+  </aside>
+
   <script src="/static/js/api.js"></script>
   <script src="/static/js/popup.js"></script>
   <script src="/static/js/article.js"></script>
   <script src="/static/js/settings.js"></script>
   <script src="/static/js/history.js"></script>
+  <script src="/static/js/vocab-book.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

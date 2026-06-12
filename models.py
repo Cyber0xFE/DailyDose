@@ -143,6 +143,26 @@ class SaveHistoryRequest(BaseModel):
     full_translation: Optional[FullTranslateData] = None
 
 
+# ─── 生词本 ─────────────────────────────────────────
+
+class AddVocabRequest(BaseModel):
+    word: str = Field(..., min_length=1)
+    definition: str = Field(default="")
+    part_of_speech: str = ""
+    source_article_title: str = ""
+    source_article_id: str = ""
+
+
+class VocabBookEntry(BaseModel):
+    id: str
+    word: str
+    definition: str
+    part_of_speech: str = ""
+    source_article_title: str = ""
+    source_article_id: str = ""
+    created_at: str
+
+
 # ─── 通用 ─────────────────────────────────────────────
 
 class TestConnectionResponse(BaseModel):

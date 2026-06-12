@@ -10,6 +10,7 @@ const Article = {
   _clickTimer: null,
   _clickDebounceMs: 300,
   _saveTimer: null,
+  _contextMenu: null,
   _streamBuffer: '',
   _streamPara: null,
 
@@ -19,6 +20,22 @@ const Article = {
     });
     document.getElementById('btnMarkPhrases').addEventListener('click', () => {
       this._handleMarkPhrases();
+    });
+
+    // 右键上下文菜单 — 事件委托
+    document.getElementById('articleTitle').addEventListener('contextmenu', (e) => {
+      this._handleContextMenu(e);
+    });
+    document.getElementById('articleContent').addEventListener('contextmenu', (e) => {
+      this._handleContextMenu(e);
+    });
+    document.addEventListener('click', (e) => {
+      if (this._contextMenu && !this._contextMenu.contains(e.target)) {
+        this._closeContextMenu();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this._closeContextMenu();
     });
   },
 
@@ -583,6 +600,75 @@ const Article = {
         History.saveCurrentArticle();
       }
     }, 2000);
+  },
+
+  /**
+   * 右键上下文菜单。
+   */
+  _handleContextMenu(e) {
+    const spanEl = e.target.closest('.clickable-word, .phrase');
+    if (!spanEl) return;
+
+    e.preventDefault();
+    this._closeContextMenu();
+
+    const word = spanEl.dataset.word;
+    const key = word.toLowerCase().replace(/[^a-z']/g, '');
+
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.innerHTML =
+      '<div class="context-menu-item" data-action="lookup">📖 查看释义</div>'
+      + '<div class="context-menu-item" data-action="addVocab">📝 添加到生词本</div>';
+
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+
+    menu.querySelector('[data-action="lookup"]').addEventListener('click', () => {
+      this._translateWord(word, spanEl);
+      this._closeContextMenu();
+    });
+
+    menu.querySelector('[data-action="addVocab"]').addEventListener('click', async () => {
+      const cached = this._wordCache[key];
+      if (cached) {
+        VocabBook.addWord(word, cached.definition, cached.part_of_speech);
+      } else {
+        // 缓存未命中，先查释义再添加
+        const context = this._getContext(spanEl);
+        try {
+          const res = await API.translateWord(word, context);
+          if (res.success && res.data) {
+            this._wordCache[key] = res.data;
+            VocabBook.addWord(word, res.data.definition, res.data.part_of_speech);
+          } else {
+            VocabBook.addWord(word, '', '');
+          }
+        } catch {
+          VocabBook.addWord(word, '', '');
+        }
+      }
+      this._closeContextMenu();
+    });
+
+    document.body.appendChild(menu);
+    this._contextMenu = menu;
+
+    // 防止菜单溢出视口
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 10) {
+      menu.style.left = (e.clientX - rect.width) + 'px';
+    }
+    if (rect.bottom > window.innerHeight - 10) {
+      menu.style.top = (e.clientY - rect.height) + 'px';
+    }
+  },
+
+  _closeContextMenu() {
+    if (this._contextMenu) {
+      this._contextMenu.remove();
+      this._contextMenu = null;
+    }
   },
 
 };

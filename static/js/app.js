@@ -14,6 +14,7 @@ const App = {
     Article.init();
     Settings.init();
     History.init();
+    VocabBook.init();
 
     // 绑定 UI 事件
     this._bindEvents();

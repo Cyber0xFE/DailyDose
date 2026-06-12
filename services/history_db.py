@@ -37,6 +37,17 @@ async def get_db() -> aiosqlite.Connection:
     await db.execute(
         "CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at DESC)"
     )
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS vocab_book (
+            id                   TEXT PRIMARY KEY,
+            word                 TEXT NOT NULL,
+            definition           TEXT NOT NULL,
+            part_of_speech       TEXT NOT NULL DEFAULT '',
+            source_article_title TEXT NOT NULL DEFAULT '',
+            source_article_id    TEXT NOT NULL DEFAULT '',
+            created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
     await db.commit()
     return db
 
@@ -208,5 +219,64 @@ async def clear_history() -> int:
         cursor = await db.execute("DELETE FROM history")
         await db.commit()
         return cursor.rowcount
+    finally:
+        await db.close()
+
+
+# ─── 生词本 CRUD ──────────────────────────────────────
+
+async def add_vocab(
+    word: str,
+    definition: str,
+    part_of_speech: str = "",
+    source_article_title: str = "",
+    source_article_id: str = "",
+) -> dict:
+    import uuid
+    db = await get_db()
+    try:
+        entry_id = uuid.uuid4().hex
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        await db.execute(
+            "INSERT INTO vocab_book (id, word, definition, part_of_speech, "
+            "source_article_title, source_article_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (entry_id, word, definition, part_of_speech,
+             source_article_title, source_article_id, now),
+        )
+        await db.commit()
+        return {
+            "id": entry_id,
+            "word": word,
+            "definition": definition,
+            "part_of_speech": part_of_speech,
+            "source_article_title": source_article_title,
+            "source_article_id": source_article_id,
+            "created_at": now,
+        }
+    finally:
+        await db.close()
+
+
+async def list_vocab() -> list[dict]:
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT * FROM vocab_book ORDER BY created_at DESC"
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        await db.close()
+
+
+async def delete_vocab(vocab_id: str) -> bool:
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "DELETE FROM vocab_book WHERE id = ?", (vocab_id,)
+        )
+        await db.commit()
+        return cursor.rowcount > 0
     finally:
         await db.close()

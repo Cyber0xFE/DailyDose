@@ -169,4 +169,20 @@ const API = {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   },
+
+  // ─── 生词本 ─────────────────────────────
+
+  async getVocab() {
+    return this.get('/api/vocab');
+  },
+
+  async addVocab(payload) {
+    return this.post('/api/vocab', payload);
+  },
+
+  async deleteVocab(id) {
+    const response = await fetch(`/api/vocab/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  },
 };

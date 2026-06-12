@@ -50,11 +50,13 @@ from routes.article import router as article_router
 from routes.translate import router as translate_router
 from routes.settings import router as settings_router
 from routes.history import router as history_router
+from routes.vocab import router as vocab_router
 
 app.include_router(article_router)
 app.include_router(translate_router)
 app.include_router(settings_router)
 app.include_router(history_router)
+app.include_router(vocab_router)
 
 
 # ─── 静态文件 ─────────────────────────────────────────
