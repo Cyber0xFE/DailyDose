@@ -55,3 +55,9 @@ async def delete_history_item(article_id: str):
 async def clear_history():
     count = await history_db.clear_history()
     return {"success": True, "message": f"Deleted {count} items"}
+
+
+@router.post("/clear-translations")
+async def clear_translations():
+    count = await history_db.clear_translations()
+    return {"success": True, "message": f"Cleared translations from {count} articles"}

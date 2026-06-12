@@ -185,4 +185,8 @@ const API = {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   },
+
+  async clearTranslations() {
+    return this.post('/api/history/clear-translations');
+  },
 };

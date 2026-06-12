@@ -560,8 +560,8 @@ const Article = {
     const translations = data.paragraph_translations || [];
     document.querySelectorAll('.trans-para').forEach(el => el.remove());
 
+    // fallback：没有分段翻译时，用全文翻译插入到最后一段后
     if (translations.length === 0 && data.translation) {
-      // fallback：全文翻译插入到最后一段后
       const lastPara = document.querySelector('#articleContent p:not(.trans-para):last-of-type');
       if (lastPara) {
         const transP = document.createElement('p');
@@ -581,12 +581,21 @@ const Article = {
       contentEl.querySelectorAll('p:not(.trans-para)').forEach(p => targets.push(p));
     }
 
-    // 一一对应：translation[i] 插入到 targets[i] 后面
-    for (let i = 0; i < targets.length && i < translations.length; i++) {
+    // 将翻译插入对应位置；多余翻译依次追加到上一条翻译后面
+    let lastTransEl = null;
+    for (let i = 0; i < translations.length; i++) {
       const transP = document.createElement('p');
       transP.className = 'trans-para';
       transP.textContent = translations[i];
-      targets[i].insertAdjacentElement('afterend', transP);
+
+      if (i < targets.length) {
+        targets[i].insertAdjacentElement('afterend', transP);
+      } else if (lastTransEl) {
+        lastTransEl.insertAdjacentElement('afterend', transP);
+      } else if (contentEl) {
+        contentEl.appendChild(transP);
+      }
+      lastTransEl = transP;
     }
   },
 

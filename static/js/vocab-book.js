@@ -79,10 +79,11 @@ const VocabBook = {
       li.dataset.id = item.id;
       li.innerHTML =
         '<div class="vocab-item-main">'
+        + '<span class="vocab-toggle">▶</span>'
         + '<span class="vocab-word">' + this._escapeHtml(item.word) + '</span>'
         + '<button class="vocab-speak" title="发音">🔊</button>'
         + (item.part_of_speech ? '<span class="vocab-pos">' + this._escapeHtml(item.part_of_speech) + '</span>' : '')
-        + '<span class="vocab-definition">' + this._escapeHtml(item.definition) + '</span>'
+        + '<span class="vocab-definition hidden">' + this._escapeHtml(item.definition) + '</span>'
         + (item.source_article_title
           ? '<span class="vocab-meta">来自：' + this._escapeHtml(item.source_article_title) + ' · ' + this._formatDate(item.created_at) + '</span>'
           : '<span class="vocab-meta">' + this._formatDate(item.created_at) + '</span>')
@@ -97,6 +98,21 @@ const VocabBook = {
       li.querySelector('.vocab-speak').addEventListener('click', (e) => {
         e.stopPropagation();
         this._speak(item.word);
+      });
+
+      li.querySelector('.vocab-item-main').addEventListener('click', () => {
+        const defEl = li.querySelector('.vocab-definition');
+        const toggleEl = li.querySelector('.vocab-toggle');
+        const isHidden = defEl.classList.contains('hidden');
+        if (isHidden) {
+          defEl.classList.remove('hidden');
+          toggleEl.textContent = '▼';
+          li.classList.add('expanded');
+        } else {
+          defEl.classList.add('hidden');
+          toggleEl.textContent = '▶';
+          li.classList.remove('expanded');
+        }
       });
 
       this._elList.appendChild(li);

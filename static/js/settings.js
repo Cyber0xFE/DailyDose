@@ -20,6 +20,8 @@ const Settings = {
     document.getElementById('btnSaveSettings').addEventListener('click', () => this.save());
     // 测试连接
     document.getElementById('btnTestConnection').addEventListener('click', () => this.testConnection());
+    // 清除翻译缓存
+    document.getElementById('btnClearTranslations').addEventListener('click', () => this.clearTranslations());
   },
 
   /**
@@ -132,6 +134,33 @@ const Settings = {
       resultDiv.textContent = `❌ 连接失败: ${err.message}`;
     } finally {
       btn.textContent = '🔌 测试连接';
+      btn.disabled = false;
+    }
+  },
+
+  /**
+   * 清除所有翻译缓存（数据库 + 前端）
+   */
+  async clearTranslations() {
+    const btn = document.getElementById('btnClearTranslations');
+    btn.textContent = '⏳ 清除中...';
+    btn.disabled = true;
+
+    try {
+      const res = await API.clearTranslations();
+      if (res.success) {
+        // 同时清除前端缓存
+        if (typeof Article !== 'undefined') {
+          Article._translationCache = null;
+        }
+        App.showToast(res.message, 'success');
+      } else {
+        App.showToast('清除失败', 'error');
+      }
+    } catch (err) {
+      App.showToast('清除失败: ' + err.message, 'error');
+    } finally {
+      btn.textContent = '🗑️ 清除全部翻译缓存';
       btn.disabled = false;
     }
   },

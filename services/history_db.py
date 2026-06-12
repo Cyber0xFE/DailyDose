@@ -223,6 +223,19 @@ async def clear_history() -> int:
         await db.close()
 
 
+async def clear_translations() -> int:
+    """清除所有历史记录中的全文翻译缓存。"""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "UPDATE history SET full_translation = NULL"
+        )
+        await db.commit()
+        return cursor.rowcount
+    finally:
+        await db.close()
+
+
 # ─── 生词本 CRUD ──────────────────────────────────────
 
 async def add_vocab(

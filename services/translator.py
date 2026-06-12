@@ -27,19 +27,18 @@ FULL_TRANSLATE_SYSTEM = """You are a professional English-Chinese translator.
 
 Translate the following English article into natural, fluent Chinese.
 
-Requirements:
-- Maintain the original meaning and tone
-- Use natural Chinese expressions
-- Keep paragraph structure the same
-- The first paragraph is the article title — translate it too
-- Each paragraph (including the title) MUST have its own translation in the array
-- The number of translations in paragraph_translations MUST equal the number of paragraphs
+CRITICAL RULES:
+- The input has exactly {paragraph_count} paragraphs (including the title as paragraph 1).
+- Your paragraph_translations array MUST contain exactly {paragraph_count} items — no more, no less.
+- Translate each paragraph AS A WHOLE. Do NOT split a paragraph into multiple translations even if it contains multiple sentences. One paragraph = one translation string.
+- The first item is the title translation, followed by each body paragraph's translation in order.
+- Maintain the original meaning and tone. Use natural Chinese expressions.
 
-Return your response in the following JSON format ONLY:
-{
+Return ONLY this JSON:
+{{
   "translation": "全文中文翻译（连贯的完整翻译）",
   "paragraph_translations": ["标题翻译", "段落1翻译", "段落2翻译", ...]
-}"""
+}}"""
 
 
 async def translate_word(
@@ -206,25 +205,37 @@ async def translate_full(
     if paragraphs is None:
         paragraphs = [content]
 
+    para_count = len(paragraphs)
+    system_prompt = FULL_TRANSLATE_SYSTEM.format(paragraph_count=para_count)
     user_message = f"Article to translate:\n\n{content}"
 
     messages = [
-        {"role": "system", "content": FULL_TRANSLATE_SYSTEM},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_message},
     ]
-    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=4096)
+    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=8192)
 
     import json
+    import re
     try:
         raw = raw.strip()
+        # 去掉可能的 markdown 代码块
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1]
-            if raw.endswith("```"):
-                raw = raw[:-3]
+            if raw.rstrip().endswith("```"):
+                raw = raw.rstrip()[:-3]
+        # 用正则提取第一个完整 JSON 对象（兼容 LLM 输出中夹杂的解释文字）
+        m = re.search(r'\{[\s\S]*\}', raw)
+        if m:
+            raw = m.group()
         data = json.loads(raw)
+        p_trans = data.get("paragraph_translations", [])
+        # 校验：翻译段落数必须与原文段落数一致，否则回退到单段模式
+        if len(p_trans) != para_count:
+            p_trans = []
         return {
             "translation": data.get("translation", ""),
-            "paragraph_translations": data.get("paragraph_translations", []),
+            "paragraph_translations": p_trans,
         }
     except (json.JSONDecodeError, KeyError):
         return {
