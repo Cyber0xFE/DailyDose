@@ -5,6 +5,7 @@ const Article = {
   _currentArticle: null,
   _translationsShown: false,
   _wordCache: {},
+  _phrasesCache: null,  // 缓存短语提取结果，避免重复请求
   _clickTimer: null,
   _clickDebounceMs: 300,
   _streamBuffer: '',
@@ -29,6 +30,7 @@ const Article = {
       case 'start':
         this._currentArticle = { id: event.data.id, paragraphs: [] };
         this._wordCache = {};
+        this._phrasesCache = null;
         this._streamBuffer = '';
         this._streamPara = null;
         document.getElementById('emptyState').classList.add('hidden');
@@ -385,34 +387,57 @@ const Article = {
   },
 
   /**
-   * 标记短语 — 按钮触发，异步提取并重新渲染
+   * 标记短语 — 按钮触发，点击标记/取消标记
    */
   async _handleMarkPhrases() {
     if (!this._currentArticle) return;
-    // 已标记过则跳过
-    if (this._currentArticle.phrases && this._currentArticle.phrases.length > 0) return;
 
     const btn = document.getElementById('btnMarkPhrases');
+
+    // 已标记 → 取消标记
+    if (this._currentArticle.phrases && this._currentArticle.phrases.length > 0) {
+      this._currentArticle.phrases = [];
+      this.render(this._currentArticle);
+      btn.textContent = '🏷️ 标记短语';
+      return;
+    }
+
+    // 未标记 → 有缓存直接用，否则请求 LLM
+    if (this._phrasesCache !== null) {
+      if (this._phrasesCache.length > 0) {
+        this._currentArticle.phrases = this._phrasesCache;
+        this.render(this._currentArticle);
+        btn.textContent = '✅ 已标记（点击取消）';
+      } else {
+        App.showToast('当前文章未检测到短语', 'info');
+      }
+      return;
+    }
+
     btn.classList.add('loading');
     btn.textContent = '⏳ 提取中...';
 
     try {
       const res = await API.extractPhrases(this._currentArticle.paragraphs);
       if (res.success && res.data && res.data.phrases) {
-        this._currentArticle.phrases = res.data.phrases;
-        // 加载短语释义到缓存
-        res.data.phrases.forEach(p => {
-          const key = p.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
-          this._wordCache[key] = {
-            definition: p.definition || '',
-            part_of_speech: 'phrase',
-            synonyms: [],
-            example_sentence: '',
-          };
-        });
-        // 重新渲染以显示短语标记
-        this.render(this._currentArticle);
-        btn.textContent = '✅ 已标记';
+        this._phrasesCache = res.data.phrases;
+        if (this._phrasesCache.length > 0) {
+          this._currentArticle.phrases = res.data.phrases;
+          res.data.phrases.forEach(p => {
+            const key = p.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+            this._wordCache[key] = {
+              definition: p.definition || '',
+              part_of_speech: 'phrase',
+              synonyms: [],
+              example_sentence: '',
+            };
+          });
+          this.render(this._currentArticle);
+          btn.textContent = '✅ 已标记（点击取消）';
+        } else {
+          App.showToast('当前文章未检测到短语', 'info');
+          btn.textContent = '🏷️ 标记短语';
+        }
       } else {
         App.showToast(res.error || '短语提取失败', 'error');
         btn.textContent = '🏷️ 标记短语';

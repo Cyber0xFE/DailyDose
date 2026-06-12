@@ -108,6 +108,7 @@ const App = {
     try {
       const res = await API.generateArticle(params);
       if (res.success && res.data) {
+        Article._phrasesCache = null;
         Article.render(res.data);
         Article._preloadAfterRender();
       } else {
