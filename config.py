@@ -28,6 +28,9 @@ DEFAULT_LLM_MODEL = os.getenv("LLM_MODEL_NAME", "gpt-4o")
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "60"))
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 
+# === Tavily 搜索 ===
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+
 # === 代理 ===
 PROXY_DICT = get_proxy_dict()
 

@@ -18,73 +18,66 @@ USER_AGENT = (
     "Chrome/125.0.0.0 Safari/537.36"
 )
 
-# 搜索主题的英文查询映射
-TOPIC_QUERIES: dict[str, list[str]] = {
-    "technology": [
-        "latest technology news site:bbc.com OR site:theverge.com",
-        "interesting tech articles site:wired.com",
-        "technology trends 2025 English article",
-    ],
-    "science": [
-        "science discovery news site:nature.com OR site:sciencedaily.com",
-        "interesting science article site:nationalgeographic.com",
-        "recent scientific research English article",
-    ],
-    "daily_life": [
-        "lifestyle article site:theguardian.com",
-        "daily life tips health wellness English article",
-        "personal development life hacks article",
-    ],
-    "random": [
-        "interesting English article trending",
-        "fascinating story feature article English",
-        "popular article today English",
-    ],
-}
-
-
 async def search_articles(
     topic: str = "random",
     max_results: int = 5,
 ) -> list[dict[str, str]]:
     """
-    使用 DuckDuckGo 搜索英文文章，返回 [{title, url, snippet}]。
+    使用 Tavily Search API 搜索英文文章，返回 [{title, url, snippet, _full_text?}]。
     """
-    queries = TOPIC_QUERIES.get(topic, TOPIC_QUERIES["random"])
-    all_results: list[dict[str, str]] = []
+    from config import TAVILY_API_KEY
+
+    if not TAVILY_API_KEY:
+        logger.warning("TAVILY_API_KEY not configured")
+        return []
+
+    topic_queries = {
+        "technology": "latest technology news article",
+        "science": "recent science discovery article",
+        "daily_life": "lifestyle wellness article",
+    }
+    query = topic_queries.get(topic, f"interesting {topic} article")
+
+    proxy_url = None
+    if PROXY_DICT:
+        proxy_url = PROXY_DICT.get("http://") or PROXY_DICT.get("https://")
 
     try:
-        from duckduckgo_search import DDGS
+        async with httpx.AsyncClient(proxy=proxy_url, timeout=30.0) as client:
+            resp = await client.post(
+                "https://api.tavily.com/search",
+                json={
+                    "api_key": TAVILY_API_KEY,
+                    "query": query,
+                    "search_depth": "basic",
+                    "include_answer": True,
+                    "include_raw_content": False,
+                    "max_results": max_results,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
 
-        proxy_url = None
-        if PROXY_DICT:
-            proxy_url = PROXY_DICT.get("http://") or PROXY_DICT.get("https://")
+            results: list[dict[str, str]] = []
+            for r in data.get("results", []):
+                url = r.get("url", "")
+                if url and _is_valid_article_url(url):
+                    results.append({
+                        "title": r.get("title", ""),
+                        "url": url,
+                        "snippet": r.get("content", ""),
+                    })
 
-        with DDGS(proxy=proxy_url) as ddgs:
-            for query in queries[:2]:  # 最多用 2 个查询
-                if len(all_results) >= max_results:
-                    break
-                try:
-                    results = list(ddgs.text(query, max_results=max_results))
-                    for r in results:
-                        url = r.get("href", "")
-                        if _is_valid_article_url(url):
-                            all_results.append({
-                                "title": r.get("title", ""),
-                                "url": url,
-                                "snippet": r.get("body", ""),
-                            })
-                        if len(all_results) >= max_results:
-                            break
-                except Exception as e:
-                    logger.warning(f"DuckDuckGo search failed for '{query}': {e}")
-                    continue
-    except ImportError:
-        logger.error("duckduckgo-search library not installed")
+            # 如果有 answer，追加为第一个结果（含全文）
+            answer = data.get("answer", "")
+            if answer and results:
+                results[0]["_full_text"] = answer
+                results[0]["snippet"] = answer[:500]
+
+            return results[:max_results]
     except Exception as e:
-        logger.error(f"DuckDuckGo search error: {e}")
-
-    return all_results[:max_results]
+        logger.error(f"Tavily search error: {e}")
+        return []
 
 
 async def scrape_article(url: str) -> str:

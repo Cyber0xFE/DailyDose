@@ -112,6 +112,9 @@ const App = {
         Article._translationCache = null;
         Article.render(res.data);
         Article._preloadAfterRender();
+        if (res.data.fallback_reason) {
+          this.showToast(res.data.fallback_reason, 'warning');
+        }
       } else {
         this.showToast(res.error || '生成失败，请重试', 'error');
       }

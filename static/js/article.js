@@ -100,7 +100,28 @@ const Article = {
     document.querySelectorAll('.trans-para').forEach(el => el.remove());
 
     // 元数据 badges
-    sourceBadge.textContent = articleData.source === 'web' ? '🌐 网络文章' : '🤖 AI 生成';
+    if (articleData.source === 'web' && articleData.source_url) {
+      try {
+        const url = new URL(articleData.source_url);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          throw new Error('unsafe protocol');
+        }
+        const domain = url.hostname;
+        sourceBadge.textContent = '';
+        const link = document.createElement('a');
+        link.href = url.href;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.title = url.href;
+        link.textContent = `来源：${domain}`;
+        sourceBadge.appendChild(document.createTextNode('🌐 '));
+        sourceBadge.appendChild(link);
+      } catch {
+        sourceBadge.textContent = '🌐 网络文章';
+      }
+    } else {
+      sourceBadge.textContent = '🤖 AI 生成';
+    }
     diffBadge.textContent = {
       beginner: '🟢 初级',
       intermediate: '🟡 中级',

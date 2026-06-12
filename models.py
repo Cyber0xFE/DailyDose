@@ -54,6 +54,7 @@ class ArticleData(BaseModel):
     word_count: int
     vocabulary: list[VocabularyItem] = []
     phrases: list[PhraseItem] = []
+    fallback_reason: str = ""  # 非空说明搜索降级为 AI 生成
 
 
 class ArticleResponse(BaseModel):

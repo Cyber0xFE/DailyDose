@@ -154,6 +154,7 @@ async def generate_article_stream(
             "source_url": None,
             "difficulty": difficulty,
             "word_count": count_words("\n".join(paragraphs)),
+            "fallback_reason": "",
         },
     }
 
@@ -203,6 +204,7 @@ async def _generate_from_ai(
         "source_url": None,
         "difficulty": difficulty,
         "word_count": count_words("\n".join(paragraphs)),
+        "fallback_reason": "",
     }
 
 
@@ -218,33 +220,43 @@ async def _generate_from_search(
     # 1. 搜索文章
     search_results = await search_articles(resolved_topic, max_results=5)
     if not search_results:
-        # 降级为 AI 生成
         logger.warning("No search results found, falling back to AI generation")
-        return await _generate_from_ai(client, article_id, topic, difficulty, word_count)
+        result = await _generate_from_ai(client, article_id, topic, difficulty, word_count)
+        result["fallback_reason"] = "网络搜索无结果，已降级为 AI 生成"
+        return result
 
-    # 2. 尝试抓取（直到成功抓到一个）
+    # 2. 获取文章内容（优先用 Chat 返回的全文，否则抓取网页）
     raw_content = ""
     source_url = ""
     source_title = ""
-    for result in search_results:
-        content = await scrape_article(result["url"])
-        if content and len(content) > 200:
-            raw_content = content
-            source_url = result["url"]
-            source_title = result["title"]
-            break
+
+    first_result = search_results[0]
+    if first_result.get("_full_text"):
+        # Chat 模式直接返回了文章全文
+        raw_content = first_result["_full_text"]
+        source_url = first_result.get("url", "")
+        source_title = first_result.get("title", "")
+    else:
+        # Text 搜索模式：需要抓取网页
+        for result in search_results:
+            content = await scrape_article(result["url"])
+            if content and len(content) > 200:
+                raw_content = content
+                source_url = result["url"]
+                source_title = result["title"]
+                break
 
     if not raw_content:
-        # 降级为 AI 生成
-        logger.warning("Failed to scrape any article, falling back to AI generation")
-        return await _generate_from_ai(client, article_id, topic, difficulty, word_count)
+        logger.warning("Failed to get article content, falling back to AI generation")
+        result = await _generate_from_ai(client, article_id, topic, difficulty, word_count)
+        result["fallback_reason"] = "文章抓取失败，已降级为 AI 生成"
+        return result
 
     # 3. 用 LLM 改写
     prompt = REWRITE_SYSTEM_PROMPT.format(
         difficulty=difficulty,
         word_count=word_count,
     )
-    # 截断原文（避免超出 token 限制）
     truncated = raw_content[:3000]
     messages = [
         {"role": "system", "content": prompt},
@@ -267,4 +279,5 @@ async def _generate_from_search(
         "source_url": source_url,
         "difficulty": difficulty,
         "word_count": count_words("\n".join(paragraphs)),
+        "fallback_reason": "",
     }

@@ -181,6 +181,12 @@ body {
   font-size: .78rem;
   font-weight: 500;
 }
+.badge a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.badge a:hover { opacity: .7; }
 
 .btn-translate-full {
   padding: 8px 18px;
@@ -430,6 +436,7 @@ body {
 }
 .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 .toast.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.toast.warning { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
 @keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
 /* ─── 响应式 ─── */
