@@ -6,6 +6,7 @@ const Article = {
   _translationsShown: false,
   _wordCache: {},
   _phrasesCache: null,  // 缓存短语提取结果，避免重复请求
+  _translationCache: null,  // 缓存全文翻译结果
   _clickTimer: null,
   _clickDebounceMs: 300,
   _streamBuffer: '',
@@ -31,6 +32,7 @@ const Article = {
         this._currentArticle = { id: event.data.id, paragraphs: [] };
         this._wordCache = {};
         this._phrasesCache = null;
+        this._translationCache = null;
         this._streamBuffer = '';
         this._streamPara = null;
         document.getElementById('emptyState').classList.add('hidden');
@@ -94,8 +96,8 @@ const Article = {
     const articleArea = document.getElementById('articleArea');
     const emptyState = document.getElementById('emptyState');
 
-    // 标题
-    titleEl.textContent = articleData.title;
+    // 清除旧文章的翻译残留（含标题翻译在 header 中的 .trans-para）
+    document.querySelectorAll('.trans-para').forEach(el => el.remove());
 
     // 元数据 badges
     sourceBadge.textContent = articleData.source === 'web' ? '🌐 网络文章' : '🤖 AI 生成';
@@ -106,6 +108,13 @@ const Article = {
     }[articleData.difficulty] || articleData.difficulty;
     countBadge.textContent = `📊 ${articleData.word_count} 词`;
 
+    // 构建短语前缀匹配表
+    const phraseMap = this._buildPhraseMap(articleData.phrases || []);
+
+    // 标题 — 也渲染为可点击单词
+    titleEl.replaceChildren();
+    this._renderClickableText(titleEl, articleData.title, phraseMap);
+
     // 渲染段落，每个单词包裹为可点击 span（短语合并为单个 span）
     contentEl.replaceChildren();
     this._translationsShown = false;
@@ -114,54 +123,9 @@ const Article = {
     const btnPhrases = document.getElementById('btnMarkPhrases');
     btnPhrases.textContent = '🏷️ 标记短语';
 
-    // 构建短语前缀匹配表
-    const phraseMap = this._buildPhraseMap(articleData.phrases || []);
-
     articleData.paragraphs.forEach(para => {
       const p = document.createElement('p');
-      const tokens = this._tokenize(para);
-      // 提取纯单词序列用于短语匹配
-      const wordTokens = tokens.filter(t => t.type === 'word');
-
-      let wi = 0; // wordTokens 索引
-      let ti = 0; // tokens 索引
-      while (ti < tokens.length) {
-        const token = tokens[ti];
-        if (token.type !== 'word') {
-          p.appendChild(document.createTextNode(token.text));
-          ti++;
-          continue;
-        }
-
-        // 尝试匹配短语
-        const matched = this._matchPhrase(wordTokens, wi, phraseMap);
-        if (matched) {
-          const span = document.createElement('span');
-          span.className = 'phrase';
-          span.textContent = matched.text;
-          span.dataset.word = matched.text;
-          span.addEventListener('click', (e) => this._handleWordClick(e, span));
-          p.appendChild(span);
-          // 跳过短语包含的词
-          const phraseWordCount = matched.text.split(/\s+/).length;
-          wi += phraseWordCount;
-          // 跳过对应的 tokens
-          let skipped = 0;
-          while (ti < tokens.length && skipped < phraseWordCount) {
-            if (tokens[ti].type === 'word') skipped++;
-            ti++;
-          }
-        } else {
-          const span = document.createElement('span');
-          span.className = 'clickable-word';
-          span.textContent = token.text;
-          span.dataset.word = token.text;
-          span.addEventListener('click', (e) => this._handleWordClick(e, span));
-          p.appendChild(span);
-          wi++;
-          ti++;
-        }
-      }
+      this._renderClickableText(p, para, phraseMap);
       contentEl.appendChild(p);
     });
 
@@ -194,9 +158,9 @@ const Article = {
     const contentEl = document.getElementById('articleContent');
     if (!contentEl) return;
 
-    // 从 DOM 中收集所有唯一单词（排除短词）
+    // 从 DOM 中收集所有唯一单词（标题 + 正文，排除短词）
     const wordSet = new Set();
-    contentEl.querySelectorAll('.clickable-word').forEach(el => {
+    document.querySelectorAll('#articleTitle .clickable-word, #articleContent .clickable-word').forEach(el => {
       const text = el.dataset.word || el.textContent;
       const clean = text.toLowerCase().replace(/[^a-z']/g, '');
       if (clean.length >= 3) wordSet.add(text);
@@ -233,6 +197,51 @@ const Article = {
     )).then(() => {
       console.log('[cache] 预加载完成，共 %d 条', Object.keys(this._wordCache).length);
     });
+  },
+
+  /**
+   * 将文本渲染为可点击单词和短语 span，追加到 parentEl 中。
+   */
+  _renderClickableText(parentEl, text, phraseMap) {
+    const tokens = this._tokenize(text);
+    const wordTokens = tokens.filter(t => t.type === 'word');
+
+    let wi = 0;
+    let ti = 0;
+    while (ti < tokens.length) {
+      const token = tokens[ti];
+      if (token.type !== 'word') {
+        parentEl.appendChild(document.createTextNode(token.text));
+        ti++;
+        continue;
+      }
+
+      const matched = this._matchPhrase(wordTokens, wi, phraseMap);
+      if (matched) {
+        const span = document.createElement('span');
+        span.className = 'phrase';
+        span.textContent = matched.text;
+        span.dataset.word = matched.text;
+        span.addEventListener('click', (e) => this._handleWordClick(e, span));
+        parentEl.appendChild(span);
+        const phraseWordCount = matched.text.split(/\s+/).length;
+        wi += phraseWordCount;
+        let skipped = 0;
+        while (ti < tokens.length && skipped < phraseWordCount) {
+          if (tokens[ti].type === 'word') skipped++;
+          ti++;
+        }
+      } else {
+        const span = document.createElement('span');
+        span.className = 'clickable-word';
+        span.textContent = token.text;
+        span.dataset.word = token.text;
+        span.addEventListener('click', (e) => this._handleWordClick(e, span));
+        parentEl.appendChild(span);
+        wi++;
+        ti++;
+      }
+    }
   },
 
   /**
@@ -459,22 +468,34 @@ const Article = {
     const btn = document.getElementById('btnFullTranslate');
     const contentEl = document.getElementById('articleContent');
 
-    // 已显示 → 移除所有翻译段落
+    // 已显示 → 移除所有翻译段落（含标题翻译）
     if (this._translationsShown) {
-      contentEl.querySelectorAll('.trans-para').forEach(el => el.remove());
+      document.querySelectorAll('.trans-para').forEach(el => el.remove());
       this._translationsShown = false;
       btn.textContent = '🌐 全文翻译';
+      return;
+    }
+
+    // 有缓存 → 直接显示
+    if (this._translationCache) {
+      this._insertTranslations(this._translationCache);
+      this._translationsShown = true;
+      btn.textContent = '🙈 隐藏翻译';
       return;
     }
 
     btn.classList.add('loading');
     btn.textContent = '⏳ 翻译中...';
 
-    const content = this._currentArticle.paragraphs.join('\n\n');
+    // 标题 + 正文一起发送翻译
+    const title = this._currentArticle.title;
+    const allParagraphs = [title, ...this._currentArticle.paragraphs];
+    const content = allParagraphs.join('\n\n');
 
     try {
-      const res = await API.translateFull(content, this._currentArticle.paragraphs);
+      const res = await API.translateFull(content, allParagraphs);
       if (res.success && res.data) {
+        this._translationCache = res.data;
         this._insertTranslations(res.data);
         this._translationsShown = true;
         btn.textContent = '🙈 隐藏翻译';
@@ -492,26 +513,36 @@ const Article = {
    * 将翻译逐段插入到对应英文段落后
    */
   _insertTranslations(data) {
-    const contentEl = document.getElementById('articleContent');
-    const paragraphs = contentEl.querySelectorAll('p:not(.trans-para)');
     const translations = data.paragraph_translations || [];
+    document.querySelectorAll('.trans-para').forEach(el => el.remove());
 
-    if (translations.length > 0) {
-      paragraphs.forEach((para, i) => {
-        if (i < translations.length) {
-          const transP = document.createElement('p');
-          transP.className = 'trans-para';
-          transP.textContent = translations[i];
-          para.after(transP);
-        }
-      });
-    } else if (data.translation) {
+    if (translations.length === 0 && data.translation) {
       // fallback：全文翻译插入到最后一段后
+      const lastPara = document.querySelector('#articleContent p:not(.trans-para):last-of-type');
+      if (lastPara) {
+        const transP = document.createElement('p');
+        transP.className = 'trans-para';
+        transP.textContent = data.translation;
+        lastPara.insertAdjacentElement('afterend', transP);
+      }
+      return;
+    }
+
+    // 收集所有翻译目标元素：标题 h2 + 正文各段 p
+    const targets = [];
+    const titleEl = document.getElementById('articleTitle');
+    if (titleEl) targets.push(titleEl);
+    const contentEl = document.getElementById('articleContent');
+    if (contentEl) {
+      contentEl.querySelectorAll('p:not(.trans-para)').forEach(p => targets.push(p));
+    }
+
+    // 一一对应：translation[i] 插入到 targets[i] 后面
+    for (let i = 0; i < targets.length && i < translations.length; i++) {
       const transP = document.createElement('p');
       transP.className = 'trans-para';
-      transP.textContent = data.translation;
-      const lastPara = paragraphs[paragraphs.length - 1];
-      if (lastPara) lastPara.after(transP);
+      transP.textContent = translations[i];
+      targets[i].insertAdjacentElement('afterend', transP);
     }
   },
 

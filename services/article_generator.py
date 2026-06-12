@@ -2,6 +2,7 @@
 文章生成编排服务 — 支持 search（网络搜索+LLM改写）和 ai（纯LLM生成）两种模式。
 """
 import logging
+import random as _random
 import re
 
 from .llm_client import LLMClient
@@ -15,6 +16,16 @@ from .text_processor import (
 from .translator import translate_vocabulary, extract_phrases
 
 logger = logging.getLogger(__name__)
+
+TOPICS = ["technology", "science", "daily_life"]
+
+
+def _resolve_topic(topic: str) -> str:
+    """如果 topic 为 random，从候选主题中随机选一个。"""
+    if topic == "random":
+        return _random.choice(TOPICS)
+    return topic
+
 
 # ─── AI 生成的 System Prompt ──────────────────────────
 
@@ -107,14 +118,15 @@ async def generate_article_stream(
     # 发送 start 事件
     yield {"event": "start", "data": {"id": article_id}}
 
+    resolved_topic = _resolve_topic(topic)
     prompt = GENERATE_SYSTEM_PROMPT.format(
         difficulty=difficulty,
-        topic=topic,
+        topic=resolved_topic,
         word_count=word_count,
     )
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": f"Please generate an English article about {topic}."},
+        {"role": "user", "content": f"Please generate an English article about {resolved_topic}."},
     ]
 
     full_text = ""
@@ -163,14 +175,15 @@ async def _generate_from_ai(
     word_count: int,
 ) -> dict:
     """纯 AI 生成文章。"""
+    resolved_topic = _resolve_topic(topic)
     prompt = GENERATE_SYSTEM_PROMPT.format(
         difficulty=difficulty,
-        topic=topic,
+        topic=resolved_topic,
         word_count=word_count,
     )
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": f"Please generate an English article about {topic}."},
+        {"role": "user", "content": f"Please generate an English article about {resolved_topic}."},
     ]
     raw_text = await client.chat_completion(messages, temperature=0.8)
 
@@ -201,8 +214,9 @@ async def _generate_from_search(
     word_count: int,
 ) -> dict:
     """通过网络搜索抓取文章，再用 LLM 改写。"""
+    resolved_topic = _resolve_topic(topic)
     # 1. 搜索文章
-    search_results = await search_articles(topic, max_results=5)
+    search_results = await search_articles(resolved_topic, max_results=5)
     if not search_results:
         # 降级为 AI 生成
         logger.warning("No search results found, falling back to AI generation")

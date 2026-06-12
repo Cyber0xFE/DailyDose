@@ -31,12 +31,14 @@ Requirements:
 - Maintain the original meaning and tone
 - Use natural Chinese expressions
 - Keep paragraph structure the same
-- For each paragraph, provide both the paragraph translation
+- The first paragraph is the article title — translate it too
+- Each paragraph (including the title) MUST have its own translation in the array
+- The number of translations in paragraph_translations MUST equal the number of paragraphs
 
 Return your response in the following JSON format ONLY:
 {
   "translation": "全文中文翻译（连贯的完整翻译）",
-  "paragraph_translations": ["段落1翻译", "段落2翻译", ...]
+  "paragraph_translations": ["标题翻译", "段落1翻译", "段落2翻译", ...]
 }"""
 
 
