@@ -17,7 +17,7 @@ from .translator import translate_vocabulary, extract_phrases
 
 logger = logging.getLogger(__name__)
 
-TOPICS = ["technology", "science", "daily_life"]
+TOPICS = ["technology", "science", "daily_life", "computer", "military", "news", "health", "history", "business"]
 
 
 def _resolve_topic(topic: str) -> str:

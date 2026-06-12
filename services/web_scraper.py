@@ -35,6 +35,12 @@ async def search_articles(
         "technology": "latest technology news article",
         "science": "recent science discovery article",
         "daily_life": "lifestyle wellness article",
+        "computer": "computer programming software article",
+        "military": "military defense news article",
+        "news": "current news headline article",
+        "health": "health medicine wellness article",
+        "history": "history interesting facts article",
+        "business": "business finance economy article",
     }
     query = topic_queries.get(topic, f"interesting {topic} article")
 
