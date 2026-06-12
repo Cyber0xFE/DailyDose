@@ -13,6 +13,7 @@ const App = {
     Popup.init();
     Article.init();
     Settings.init();
+    History.init();
 
     // 绑定 UI 事件
     this._bindEvents();

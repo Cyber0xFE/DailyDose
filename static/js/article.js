@@ -9,6 +9,7 @@ const Article = {
   _translationCache: null,  // 缓存全文翻译结果
   _clickTimer: null,
   _clickDebounceMs: 300,
+  _saveTimer: null,
   _streamBuffer: '',
   _streamPara: null,
 
@@ -157,6 +158,8 @@ const Article = {
     // 滚动到文章
     articleArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+    this._scheduleSave();
+
     // 加载短语缓存
     if (articleData.phrases && articleData.phrases.length > 0) {
       articleData.phrases.forEach(p => {
@@ -217,6 +220,7 @@ const Article = {
       }).catch(err => console.error('[cache] 批次失败:', err))
     )).then(() => {
       console.log('[cache] 预加载完成，共 %d 条', Object.keys(this._wordCache).length);
+      this._scheduleSave();
     });
   },
 
@@ -463,6 +467,7 @@ const Article = {
             };
           });
           this.render(this._currentArticle);
+          this._scheduleSave();
           btn.textContent = '✅ 已标记（点击取消）';
         } else {
           App.showToast('当前文章未检测到短语', 'info');
@@ -520,6 +525,7 @@ const Article = {
         this._insertTranslations(res.data);
         this._translationsShown = true;
         btn.textContent = '🙈 隐藏翻译';
+        this._scheduleSave();
       } else {
         App.showToast(res.error || '翻译失败', 'error');
       }
@@ -565,6 +571,18 @@ const Article = {
       transP.textContent = translations[i];
       targets[i].insertAdjacentElement('afterend', transP);
     }
+  },
+
+  /**
+   * 防抖保存到历史记录（2 秒延迟，多次调用会重置计时器）。
+   */
+  _scheduleSave() {
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      if (typeof History !== 'undefined') {
+        History.saveCurrentArticle();
+      }
+    }, 2000);
   },
 
 };

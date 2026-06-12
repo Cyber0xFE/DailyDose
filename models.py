@@ -134,6 +134,15 @@ class PhraseExtractResponse(BaseModel):
     error: Optional[str] = None
 
 
+# ─── 历史记录 ─────────────────────────────────────────
+
+class SaveHistoryRequest(BaseModel):
+    article: ArticleData
+    vocabulary: Optional[list[VocabularyItem]] = None
+    phrases: Optional[list[PhraseItem]] = None
+    full_translation: Optional[FullTranslateData] = None
+
+
 # ─── 通用 ─────────────────────────────────────────────
 
 class TestConnectionResponse(BaseModel):

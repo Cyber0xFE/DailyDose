@@ -11,7 +11,10 @@
   <!-- ═══ 顶栏 ═══ -->
   <header class="topbar">
     <h1 class="logo">📖 DailyDose</h1>
-    <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
+    <div class="topbar-actions">
+      <button class="btn-icon" id="btnHistory" title="历史记录">📋</button>
+      <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
+    </div>
   </header>
 
   <!-- ═══ 控制面板 ═══ -->
@@ -147,10 +150,31 @@
   <!-- ═══ Toast ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
+  <!-- ═══ 历史记录抽屉 ═══ -->
+  <div class="drawer-overlay hidden" id="historyOverlay"></div>
+  <aside class="history-drawer" id="historyDrawer">
+    <div class="drawer-header">
+      <h2>📋 历史记录</h2>
+      <span class="drawer-count" id="historyCount">0 篇</span>
+      <button class="btn-icon drawer-close" id="historyClose">&times;</button>
+    </div>
+    <div class="drawer-actions">
+      <button class="btn-danger-sm" id="btnClearHistory">🗑️ 清空全部</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-empty" id="historyEmpty">
+        <p>暂无历史记录</p>
+        <p class="hint">生成文章后会自动保存在这里</p>
+      </div>
+      <ul class="history-list hidden" id="historyList"></ul>
+    </div>
+  </aside>
+
   <script src="/static/js/api.js"></script>
   <script src="/static/js/popup.js"></script>
   <script src="/static/js/article.js"></script>
   <script src="/static/js/settings.js"></script>
+  <script src="/static/js/history.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

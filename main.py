@@ -2,6 +2,7 @@
 DailyDose — 英语学习 Agent
 FastAPI 应用入口
 """
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,9 +11,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import APP_TITLE, APP_VERSION, DEFAULT_LLM_ENDPOINT, DEFAULT_LLM_API_KEY, DEFAULT_LLM_MODEL
 
+
+# ─── 生命周期 ─────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import services.history_db as history_db
+    db = await history_db.get_db()
+    await db.close()
+    yield
+
+
 # ─── 创建应用 ─────────────────────────────────────────
 
-app = FastAPI(title=APP_TITLE, version=APP_VERSION)
+app = FastAPI(title=APP_TITLE, version=APP_VERSION, lifespan=lifespan)
 
 # CORS 中间件
 app.add_middleware(
@@ -37,10 +49,13 @@ if DEFAULT_LLM_API_KEY:
 from routes.article import router as article_router
 from routes.translate import router as translate_router
 from routes.settings import router as settings_router
+from routes.history import router as history_router
 
 app.include_router(article_router)
 app.include_router(translate_router)
 app.include_router(settings_router)
+app.include_router(history_router)
+
 
 # ─── 静态文件 ─────────────────────────────────────────
 

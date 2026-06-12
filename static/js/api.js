@@ -143,4 +143,30 @@ const API = {
   async testLLMConnection(config) {
     return this.post('/api/settings/llm/test', config);
   },
+
+  // ─── 历史记录 ─────────────────────────────
+
+  async getHistory() {
+    return this.get('/api/history');
+  },
+
+  async getHistoryDetail(id) {
+    return this.get(`/api/history/${id}`);
+  },
+
+  async saveHistory(payload) {
+    return this.post('/api/history', payload);
+  },
+
+  async deleteHistoryItem(id) {
+    const response = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  },
+
+  async clearHistory() {
+    const response = await fetch('/api/history', { method: 'DELETE' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  },
 };
