@@ -22,6 +22,8 @@ const Settings = {
     document.getElementById('btnTestConnection').addEventListener('click', () => this.testConnection());
     // 清除翻译缓存
     document.getElementById('btnClearTranslations').addEventListener('click', () => this.clearTranslations());
+    // 清除短语缓存
+    document.getElementById('btnClearPhrases').addEventListener('click', () => this.clearPhrases());
   },
 
   /**
@@ -160,7 +162,30 @@ const Settings = {
     } catch (err) {
       App.showToast('清除失败: ' + err.message, 'error');
     } finally {
-      btn.textContent = '🗑️ 清除全部翻译缓存';
+      btn.textContent = '🗑️ 清除翻译缓存';
+      btn.disabled = false;
+    }
+  },
+
+  async clearPhrases() {
+    const btn = document.getElementById('btnClearPhrases');
+    btn.textContent = '⏳ 清除中...';
+    btn.disabled = true;
+
+    try {
+      const res = await API.clearPhrases();
+      if (res.success) {
+        if (typeof Article !== 'undefined') {
+          Article._phrasesCache = null;
+        }
+        App.showToast(res.message, 'success');
+      } else {
+        App.showToast('清除失败', 'error');
+      }
+    } catch (err) {
+      App.showToast('清除失败: ' + err.message, 'error');
+    } finally {
+      btn.textContent = '🗑️ 清除短语缓存';
       btn.disabled = false;
     }
   },

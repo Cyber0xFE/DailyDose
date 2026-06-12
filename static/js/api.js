@@ -189,4 +189,8 @@ const API = {
   async clearTranslations() {
     return this.post('/api/history/clear-translations');
   },
+
+  async clearPhrases() {
+    return this.post('/api/history/clear-phrases');
+  },
 };

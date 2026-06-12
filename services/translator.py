@@ -55,7 +55,7 @@ async def translate_word(
         {"role": "system", "content": WORD_TRANSLATE_SYSTEM},
         {"role": "user", "content": user_message},
     ]
-    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=500)
+    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=2000)
 
     # 解析 JSON 响应
     import json
@@ -124,7 +124,7 @@ async def translate_vocabulary(
         {"role": "system", "content": VOCABULARY_SYSTEM},
         {"role": "user", "content": user_message},
     ]
-    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=3000)
+    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=8000)
 
     import json
     try:
@@ -171,7 +171,10 @@ async def extract_phrases(
         {"role": "system", "content": PHRASE_SYSTEM},
         {"role": "user", "content": f"Article:\n{article_text[:3000]}"},
     ]
-    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=2000)
+    raw = await client.chat_completion(messages, temperature=0.3, max_tokens=8000)
+
+    if not raw:
+        return []  # 推理模型可能耗尽了 token，content 为空
 
     import json
     try:

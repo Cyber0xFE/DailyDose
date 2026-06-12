@@ -60,4 +60,10 @@ async def clear_history():
 @router.post("/clear-translations")
 async def clear_translations():
     count = await history_db.clear_translations()
-    return {"success": True, "message": f"Cleared translations from {count} articles"}
+    return {"success": True, "message": f"已清除 {count} 篇文章的翻译缓存"}
+
+
+@router.post("/clear-phrases")
+async def clear_phrases():
+    count = await history_db.clear_phrases()
+    return {"success": True, "message": f"已清除 {count} 篇文章的短语缓存"}
