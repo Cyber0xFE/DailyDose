@@ -7,6 +7,7 @@ const App = {
     isLoading: false,
     currentMode: 'ai',
   },
+  _streamCtrl: null,  // 流式生成取消控制器
 
   async init() {
     // 初始化子模块
@@ -35,7 +36,11 @@ const App = {
 
     // 生成按钮
     document.getElementById('btnGenerate').addEventListener('click', () => {
-      this._generateArticle();
+      if (this._state.isLoading) {
+        this._cancelGeneration();
+      } else {
+        this._generateArticle();
+      }
     });
 
     // 也支持点击"未配置"提示
@@ -80,7 +85,7 @@ const App = {
   },
 
   /**
-   * 生成文章
+   * 生成文章 — AI 模式流式，search 模式非流式。
    */
   async _generateArticle() {
     if (!this._state.isConfigured || this._state.isLoading) return;
@@ -90,7 +95,7 @@ const App = {
     const loadingArea = document.getElementById('loadingArea');
     const loadingText = document.getElementById('loadingText');
 
-    btn.disabled = true;
+    btn.textContent = '⏹ 取消';
     loadingArea.classList.remove('hidden');
 
     const mode = this._state.currentMode;
@@ -103,30 +108,53 @@ const App = {
 
     if (mode === 'ai') {
       loadingText.textContent = '🤖 AI 正在生成文章...';
+      this._streamCtrl = API.generateArticleStream(params, (event) => {
+        Article.renderStream(event);
+        if (event.event === 'done' || event.event === 'error') {
+          this._finishGeneration();
+        }
+        if (event.event === 'chunk') {
+          loadingArea.classList.add('hidden');
+        }
+      });
     } else {
       loadingText.textContent = '🔍 正在搜索相关文章...';
-    }
-
-    try {
-      const res = await API.generateArticle(params);
-      if (res.success && res.data) {
-        Article._phrasesCache = null;
-        Article._translationCache = null;
-        Article.render(res.data);
-        Article._preloadAfterRender();
-        if (res.data.fallback_reason) {
-          this.showToast(res.data.fallback_reason, 'warning');
+      try {
+        const res = await API.generateArticle(params);
+        if (res.success && res.data) {
+          Article._phrasesCache = null;
+          Article._translationCache = null;
+          Article.render(res.data);
+          Article._preloadAfterRender();
+          if (res.data.fallback_reason) {
+            this.showToast(res.data.fallback_reason, 'warning');
+          }
+        } else {
+          this.showToast(res.error || '生成失败，请重试', 'error');
         }
-      } else {
-        this.showToast(res.error || '生成失败，请重试', 'error');
+      } catch (err) {
+        this.showToast('生成失败: ' + err.message, 'error');
+      } finally {
+        this._finishGeneration();
       }
-    } catch (err) {
-      this.showToast('生成失败: ' + err.message, 'error');
-    } finally {
-      this._state.isLoading = false;
-      btn.disabled = !this._state.isConfigured;
-      loadingArea.classList.add('hidden');
     }
+  },
+
+  _cancelGeneration() {
+    if (this._streamCtrl) {
+      this._streamCtrl.abort();
+      this._streamCtrl = null;
+    }
+    this._finishGeneration();
+  },
+
+  _finishGeneration() {
+    this._state.isLoading = false;
+    this._streamCtrl = null;
+    const btn = document.getElementById('btnGenerate');
+    btn.textContent = '⚡ 生成文章';
+    btn.disabled = !this._state.isConfigured;
+    document.getElementById('loadingArea').classList.add('hidden');
   },
 
   /**

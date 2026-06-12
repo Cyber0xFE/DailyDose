@@ -54,6 +54,7 @@ const Article = {
         this._streamBuffer = '';
         this._streamPara = null;
         document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('loadingArea').classList.add('hidden');
         document.getElementById('articleArea').classList.remove('hidden');
         document.getElementById('articleTitle').textContent = '...';
         document.getElementById('btnFullTranslate').textContent = '🌐 全文翻译';

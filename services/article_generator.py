@@ -158,14 +158,6 @@ async def generate_article_stream(
         },
     }
 
-    # 后台提取短语（通过后续 SSE 事件发送，前端收到后更新 DOM）
-    full_article = "\n\n".join(paragraphs)
-    try:
-        phrases = await extract_phrases(client, full_article)
-        if phrases:
-            yield {"event": "phrases", "data": {"phrases": phrases}}
-    except Exception:
-        pass
 
 
 async def _generate_from_ai(
