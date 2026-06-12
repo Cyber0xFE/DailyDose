@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DailyDose — 英语学习</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- ═══ 顶栏 ═══ -->
+  <header class="topbar">
+    <h1 class="logo">📖 DailyDose</h1>
+    <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
+  </header>
+
+  <!-- ═══ 控制面板 ═══ -->
+  <section class="control-panel" id="controlPanel">
+    <!-- 生成方式 Tab -->
+    <div class="tabs">
+      <button class="tab active" data-mode="ai">🤖 AI 生成</button>
+      <button class="tab" data-mode="search">🔍 搜索文章</button>
+    </div>
+
+    <div class="controls-row">
+      <!-- 难度 -->
+      <div class="control-group">
+        <label>难度</label>
+        <select id="selDifficulty">
+          <option value="beginner">初级 (Beginner)</option>
+          <option value="intermediate" selected>中级 (Intermediate)</option>
+          <option value="advanced">高级 (Advanced)</option>
+        </select>
+      </div>
+
+      <!-- 主题 -->
+      <div class="control-group">
+        <label>主题</label>
+        <select id="selTopic">
+          <option value="random" selected>随机 🎲</option>
+          <option value="technology">科技 💻</option>
+          <option value="science">科学 🔬</option>
+          <option value="daily_life">生活 🏠</option>
+        </select>
+      </div>
+
+      <!-- 字数 -->
+      <div class="control-group">
+        <label>字数</label>
+        <select id="selWordCount">
+          <option value="50">~50 词</option>
+          <option value="100">~100 词</option>
+          <option value="200">~200 词</option>
+          <option value="300" selected>~300 词</option>
+          <option value="500">~500 词</option>
+          <option value="800">~800 词</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-generate" id="btnGenerate" disabled>
+      ⚡ 生成文章
+    </button>
+    <p class="hint" id="hintNotConfigured">请先点击右上角 ⚙️ 配置 LLM API</p>
+
+    <div class="loading-area hidden" id="loadingArea">
+      <div class="spinner"></div>
+      <p id="loadingText">正在生成文章...</p>
+    </div>
+  </section>
+
+  <!-- ═══ 文章区域 ═══ -->
+  <main class="article-area hidden" id="articleArea">
+    <div class="article-header">
+      <h2 class="article-title" id="articleTitle"></h2>
+      <div class="article-meta">
+        <span class="badge" id="badgeSource"></span>
+        <span class="badge" id="badgeDifficulty"></span>
+        <span class="badge" id="badgeWordCount"></span>
+      </div>
+      <button class="btn-translate-full" id="btnFullTranslate">🌐 全文翻译</button>
+    </div>
+
+    <div class="article-content" id="articleContent"></div>
+  </main>
+
+  <!-- ═══ 空状态 ═══ -->
+  <section class="empty-state" id="emptyState">
+    <div class="empty-icon">📚</div>
+    <h2>开始你的英语学习之旅</h2>
+    <p>选择偏好，点击生成按钮，即可获得一篇为你定制的英语短文</p>
+    <p>阅读时点击任意单词即可查看中文释义</p>
+  </section>
+
+  <!-- ═══ 单词释义弹窗 ═══ -->
+  <div class="popup-overlay hidden" id="popupOverlay">
+    <div class="popup-card" id="popupCard">
+      <button class="popup-close" id="popupClose">&times;</button>
+      <div class="popup-word-row">
+        <span class="popup-word" id="popupWord"></span>
+        <button class="btn-speak hidden" id="btnSpeak" title="发音">🔊</button>
+      </div>
+      <div class="popup-pos" id="popupPos"></div>
+      <div class="popup-definition" id="popupDefinition"></div>
+      <div class="popup-synonyms hidden" id="popupSynonyms"></div>
+      <div class="popup-example hidden" id="popupExample"></div>
+      <div class="popup-loading" id="popupLoading">
+        <div class="spinner-sm"></div>
+        <span>查询中...</span>
+      </div>
+      <div class="popup-error hidden" id="popupError"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 设置模态框 ═══ -->
+  <div class="modal-overlay hidden" id="settingsOverlay">
+    <div class="modal-card" id="settingsCard">
+      <div class="modal-header">
+        <h2>⚙️ LLM API 设置</h2>
+        <button class="btn-icon modal-close" id="settingsClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="cfgEndpoint">API Endpoint</label>
+          <input type="url" id="cfgEndpoint" placeholder="https://api.openai.com/v1" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="cfgApiKey">API Key</label>
+          <input type="password" id="cfgApiKey" placeholder="sk-..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="cfgModel">Model Name</label>
+          <input type="text" id="cfgModel" placeholder="gpt-4o" autocomplete="off">
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-secondary" id="btnTestConnection">🔌 测试连接</button>
+          <button class="btn-primary" id="btnSaveSettings">💾 保存配置</button>
+        </div>
+
+        <div class="test-result hidden" id="testResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Toast ═══ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/popup.js"></script>
+  <script src="/static/js/article.js"></script>
+  <script src="/static/js/settings.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
