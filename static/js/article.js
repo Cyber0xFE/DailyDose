@@ -53,12 +53,20 @@ const Article = {
         this._translationCache = null;
         this._streamBuffer = '';
         this._streamPara = null;
+        // 清除旧文章残留
+        document.querySelectorAll('.trans-para').forEach(el => el.remove());
+        Popup.hide();
+        document.getElementById('badgeSource').replaceChildren();
+        document.getElementById('badgeDifficulty').textContent = '';
+        document.getElementById('badgeWordCount').textContent = '';
+        document.getElementById('btnFullTranslate').classList.add('hidden');
+        document.getElementById('btnMarkPhrases').classList.add('hidden');
+        this._translationsShown = false;
+        // 显示文章区域
         document.getElementById('emptyState').classList.add('hidden');
         document.getElementById('loadingArea').classList.add('hidden');
         document.getElementById('articleArea').classList.remove('hidden');
         document.getElementById('articleTitle').textContent = '...';
-        document.getElementById('btnFullTranslate').textContent = '🌐 全文翻译';
-        this._translationsShown = false;
         contentEl.replaceChildren();
         // 创建实时流式段落，逐字追加
         this._streamPara = document.createElement('p');
@@ -160,8 +168,10 @@ const Article = {
     this._translationsShown = false;
     const btnTrans = document.getElementById('btnFullTranslate');
     btnTrans.textContent = '🌐 全文翻译';
+    btnTrans.classList.remove('hidden');
     const btnPhrases = document.getElementById('btnMarkPhrases');
     btnPhrases.textContent = '🏷️ 标记短语';
+    btnPhrases.classList.remove('hidden');
 
     articleData.paragraphs.forEach(para => {
       const p = document.createElement('p');
