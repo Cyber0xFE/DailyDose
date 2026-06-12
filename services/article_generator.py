@@ -6,7 +6,7 @@ import random as _random
 import re
 
 from .llm_client import LLMClient
-from .web_scraper import search_articles, scrape_article
+from .web_scraper import search_articles
 from .text_processor import (
     clean_article,
     split_paragraphs,
@@ -42,18 +42,6 @@ Requirements:
 
 Output format: Return ONLY the article text with a title on the first line. Separate paragraphs with a blank line. Do NOT include any meta-commentary or explanations."""
 
-REWRITE_SYSTEM_PROMPT = """You are an English teacher adapting real-world articles for Chinese students learning English.
-
-Rewrite the following web article to be suitable for English learners:
-
-Requirements:
-- Difficulty: {difficulty} (beginner=vocal level ~2000 words/simple sentences, intermediate=~4000 words/complex sentences, advanced=native-level)
-- Target length: about {word_count} words
-- Preserve the key information and facts from the original
-- Simplify vocabulary and sentence structure as needed for the difficulty level
-- Keep the article engaging and natural-sounding
-
-Output format: Return ONLY the rewritten article with a title on the first line. Separate paragraphs with a blank line."""
 
 
 def _extract_words(paragraphs: list[str]) -> list[str]:
@@ -217,50 +205,35 @@ async def _generate_from_search(
         result["fallback_reason"] = "网络搜索无结果，已降级为 AI 生成"
         return result
 
-    # 2. 获取文章内容（优先用 Chat 返回的全文，否则抓取网页）
-    raw_content = ""
-    source_url = ""
-    source_title = ""
+    # 2. 随机选取一个结果，优先用 Tavily answer，否则用 content snippet
+    picked = _random.choice(search_results)
+    raw_content = picked.get("_full_text") or picked.get("snippet", "")
+    source_url = picked.get("url", "")
+    source_title = picked.get("title", "")
 
-    first_result = search_results[0]
-    if first_result.get("_full_text"):
-        # Chat 模式直接返回了文章全文
-        raw_content = first_result["_full_text"]
-        source_url = first_result.get("url", "")
-        source_title = first_result.get("title", "")
-    else:
-        # Text 搜索模式：需要抓取网页
-        for result in search_results:
-            content = await scrape_article(result["url"])
-            if content and len(content) > 200:
+    # snippet 太短则尝试其他结果
+    if len(raw_content) < 100:
+        for r in search_results:
+            content = r.get("_full_text") or r.get("snippet", "")
+            if len(content) >= 100:
                 raw_content = content
-                source_url = result["url"]
-                source_title = result["title"]
+                source_url = r.get("url", "")
+                source_title = r.get("title", "")
                 break
 
-    if not raw_content:
-        logger.warning("Failed to get article content, falling back to AI generation")
+    if len(raw_content) < 100:
+        logger.warning("No suitable search content, falling back to AI generation")
         result = await _generate_from_ai(client, article_id, topic, difficulty, word_count)
-        result["fallback_reason"] = "文章抓取失败，已降级为 AI 生成"
+        result["fallback_reason"] = "搜索结果内容不足，已降级为 AI 生成"
         return result
 
-    # 3. 用 LLM 改写
-    prompt = REWRITE_SYSTEM_PROMPT.format(
-        difficulty=difficulty,
-        word_count=word_count,
-    )
-    truncated = raw_content[:3000]
-    messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": f"Original title: {source_title}\n\nOriginal article:\n{truncated}"},
-    ]
-    raw_text = await client.chat_completion(messages, temperature=0.6)
-
-    cleaned = clean_article(raw_text)
+    # 3. 直接使用网页内容，不抓取、不 LLM 改写
+    cleaned = clean_article(raw_content)
     paragraphs = split_paragraphs(cleaned)
 
-    title = paragraphs[0] if paragraphs else "Untitled"
-    if len(title) < 100 and len(paragraphs) > 1:
+    # 第一段太长可能是正文 → 用搜索结果标题代替
+    title = source_title if source_title else (paragraphs[0] if paragraphs else "Untitled")
+    if not source_title and len(title) < 100 and len(paragraphs) > 1:
         paragraphs = paragraphs[1:]
 
     return {

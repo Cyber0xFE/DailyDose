@@ -31,6 +31,10 @@ const App = {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         this._state.currentMode = tab.dataset.mode;
+        // 根据模式显示/隐藏控件
+        document.querySelectorAll('[data-show]').forEach(el => {
+          el.classList.toggle('hidden', el.dataset.show !== tab.dataset.mode);
+        });
       });
     });
 

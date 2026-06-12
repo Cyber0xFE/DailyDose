@@ -90,7 +90,7 @@ const Article = {
         // 后台提取的短语到达，加载到缓存并重新渲染标记
         if (this._currentArticle && event.data.phrases) {
           event.data.phrases.forEach(p => {
-            const key = p.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+            const key = p.text.toLowerCase().replace(/[^a-z']/g, '');
             this._wordCache[key] = {
               definition: p.definition || '',
               part_of_speech: 'phrase',
@@ -191,7 +191,7 @@ const Article = {
     // 加载短语缓存
     if (articleData.phrases && articleData.phrases.length > 0) {
       articleData.phrases.forEach(p => {
-        const key = p.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+        const key = p.text.toLowerCase().replace(/[^a-z']/g, '');
         this._wordCache[key] = {
           definition: p.definition || '',
           part_of_speech: 'phrase',
@@ -486,7 +486,7 @@ const Article = {
         if (this._phrasesCache.length > 0) {
           this._currentArticle.phrases = res.data.phrases;
           res.data.phrases.forEach(p => {
-            const key = p.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+            const key = p.text.toLowerCase().replace(/[^a-z']/g, '');
             this._wordCache[key] = {
               definition: p.definition || '',
               part_of_speech: 'phrase',
