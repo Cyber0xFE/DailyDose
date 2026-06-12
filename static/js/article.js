@@ -14,6 +14,9 @@ const Article = {
     document.getElementById('btnFullTranslate').addEventListener('click', () => {
       this._handleFullTranslate();
     });
+    document.getElementById('btnMarkPhrases').addEventListener('click', () => {
+      this._handleMarkPhrases();
+    });
   },
 
   /**
@@ -106,6 +109,8 @@ const Article = {
     this._translationsShown = false;
     const btnTrans = document.getElementById('btnFullTranslate');
     btnTrans.textContent = '🌐 全文翻译';
+    const btnPhrases = document.getElementById('btnMarkPhrases');
+    btnPhrases.textContent = '🏷️ 标记短语';
 
     // 构建短语前缀匹配表
     const phraseMap = this._buildPhraseMap(articleData.phrases || []);
@@ -377,6 +382,47 @@ const Article = {
     const parent = spanEl.parentElement;
     if (!parent) return '';
     return parent.textContent || '';
+  },
+
+  /**
+   * 标记短语 — 按钮触发，异步提取并重新渲染
+   */
+  async _handleMarkPhrases() {
+    if (!this._currentArticle) return;
+    // 已标记过则跳过
+    if (this._currentArticle.phrases && this._currentArticle.phrases.length > 0) return;
+
+    const btn = document.getElementById('btnMarkPhrases');
+    btn.classList.add('loading');
+    btn.textContent = '⏳ 提取中...';
+
+    try {
+      const res = await API.extractPhrases(this._currentArticle.paragraphs);
+      if (res.success && res.data && res.data.phrases) {
+        this._currentArticle.phrases = res.data.phrases;
+        // 加载短语释义到缓存
+        res.data.phrases.forEach(p => {
+          const key = p.text.toLowerCase().replace(/[^a-z\s']/g, '').trim();
+          this._wordCache[key] = {
+            definition: p.definition || '',
+            part_of_speech: 'phrase',
+            synonyms: [],
+            example_sentence: '',
+          };
+        });
+        // 重新渲染以显示短语标记
+        this.render(this._currentArticle);
+        btn.textContent = '✅ 已标记';
+      } else {
+        App.showToast(res.error || '短语提取失败', 'error');
+        btn.textContent = '🏷️ 标记短语';
+      }
+    } catch (err) {
+      App.showToast('短语提取失败: ' + err.message, 'error');
+      btn.textContent = '🏷️ 标记短语';
+    } finally {
+      btn.classList.remove('loading');
+    }
   },
 
   /**

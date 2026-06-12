@@ -85,22 +85,9 @@ async def generate_article(
     else:
         result = await _generate_from_ai(client, article_id, topic, difficulty, word_count)
 
-    # 提取词汇并批量翻译
-    words = _extract_words(result["paragraphs"])
-    if words:
-        try:
-            result["vocabulary"] = await translate_vocabulary(client, words[:30])
-        except Exception:
-            result["vocabulary"] = []
-    else:
-        result["vocabulary"] = []
-
-    # 提取短语
-    full_text = "\n\n".join(result["paragraphs"])
-    try:
-        result["phrases"] = await extract_phrases(client, full_text)
-    except Exception:
-        result["phrases"] = []
+    # 词汇和短语改为前端异步加载，此处不再阻塞
+    result["vocabulary"] = []
+    result["phrases"] = []
 
     return result
 

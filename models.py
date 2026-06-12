@@ -117,6 +117,22 @@ class VocabularyResponse(BaseModel):
     error: Optional[str] = None
 
 
+# ─── 短语提取（按钮触发） ──────────────────────────────
+
+class PhraseExtractRequest(BaseModel):
+    paragraphs: list[str] = Field(..., min_length=1, description="文章段落列表")
+
+
+class PhraseExtractData(BaseModel):
+    phrases: list[PhraseItem]
+
+
+class PhraseExtractResponse(BaseModel):
+    success: bool
+    data: Optional[PhraseExtractData] = None
+    error: Optional[str] = None
+
+
 # ─── 通用 ─────────────────────────────────────────────
 
 class TestConnectionResponse(BaseModel):

@@ -110,6 +110,13 @@ const API = {
   },
 
   /**
+   * 提取短语（按钮触发）
+   */
+  async extractPhrases(paragraphs) {
+    return this.post('/api/article/phrases', { paragraphs });
+  },
+
+  /**
    * 全文翻译
    */
   async translateFull(content, paragraphs) {
