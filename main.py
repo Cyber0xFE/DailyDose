@@ -61,14 +61,19 @@ app.include_router(vocab_router)
 
 # ─── 静态文件 ─────────────────────────────────────────
 
-static_dir = Path(__file__).parent / "static"
+import sys as _sys
+_frozen = getattr(_sys, "frozen", False)
+if _frozen:
+    static_dir = Path(_sys._MEIPASS) / "static"
+else:
+    static_dir = Path(__file__).parent / "static"
+
 static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 @app.get("/")
 async def root():
-    """重定向到主页面。"""
     from fastapi.responses import FileResponse
     return FileResponse(str(static_dir / "index.html"))
 
@@ -77,4 +82,17 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+
+    if _frozen:
+        import threading
+        import webview
+
+        def run_server():
+            uvicorn.run(app, host="127.0.0.1", port=8000)
+
+        threading.Thread(target=run_server, daemon=True).start()
+        webview.create_window("DailyDose — 英语学习", "http://127.0.0.1:8000",
+                              width=1024, height=768, min_size=(800, 600))
+        webview.start()
+    else:
+        uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

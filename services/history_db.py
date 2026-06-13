@@ -10,7 +10,13 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent.parent / "daily_dose.db"
+import sys as _sys
+
+if getattr(_sys, "frozen", False):
+    DB_PATH = Path(_sys.executable).parent / "daily_dose.db"
+else:
+    DB_PATH = Path(__file__).parent.parent / "daily_dose.db"
+
 MAX_ITEMS = 50
 
 

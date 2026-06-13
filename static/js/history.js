@@ -173,13 +173,19 @@ const History = {
   async saveCurrentArticle() {
     if (!Article._currentArticle) return;
 
-    const vocabList = Object.values(Article._wordCache).length > 0
-      ? null : null;
-    // Build vocabulary list from _currentArticle if it has been populated
-    // or from wordCache if needed
+    // 从 _wordCache 构建词汇列表（_currentArticle.vocabulary 始终为空）
+    const vocabList = Object.entries(Article._wordCache)
+      .filter(([, v]) => v.part_of_speech !== 'phrase')
+      .map(([word, v]) => ({
+        word: word,
+        definition: v.definition,
+        part_of_speech: v.part_of_speech || '',
+        synonyms: v.synonyms || [],
+        example_sentence: v.example_sentence || '',
+      }));
     const payload = {
       article: Article._currentArticle,
-      vocabulary: Article._currentArticle.vocabulary || null,
+      vocabulary: vocabList.length > 0 ? vocabList : null,
       phrases: Article._phrasesCache !== null ? Article._phrasesCache : null,
       full_translation: Article._translationCache || null,
     };

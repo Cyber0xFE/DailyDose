@@ -10,3 +10,9 @@ dist/
 *.db
 *.db-wal
 *.db-shm
+
+# PyInstaller
+build/
+dist/
+*.spec
+app_icon.png
