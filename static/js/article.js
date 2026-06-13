@@ -230,8 +230,23 @@ const Article = {
       batches.push(words.slice(i, i + batchSize));
     }
 
+    // 进度提示
+    const progressEl = document.getElementById('vocabProgress');
+    let completed = 0;
+    if (progressEl) {
+      progressEl.classList.remove('hidden');
+      progressEl.textContent = `⏳ 释义加载中 0/${batches.length}`;
+    }
+    const updateProgress = () => {
+      completed++;
+      if (progressEl) {
+        progressEl.textContent = `⏳ 释义加载中 ${completed}/${batches.length}`;
+      }
+    };
+
     Promise.all(batches.map(batch =>
       API.preloadVocab(batch).then(res => {
+        updateProgress();
         if (res.success && res.data && res.data.vocabulary) {
           res.data.vocabulary.forEach(item => {
             const key = item.word.toLowerCase().replace(/[^a-z']/g, '');
@@ -248,6 +263,10 @@ const Article = {
       }).catch(err => console.error('[cache] 批次失败:', err))
     )).then(() => {
       console.log('[cache] 预加载完成，共 %d 条', Object.keys(this._wordCache).length);
+      if (progressEl) {
+        progressEl.textContent = '✅ 已加载 ' + Object.keys(this._wordCache).length + ' 条释义';
+        setTimeout(function() { progressEl.classList.add('hidden'); }, 3000);
+      }
       this._scheduleSave();
     });
   },

@@ -202,6 +202,14 @@ body {
 .btn-translate-full:hover { background: var(--color-primary); color: #fff; }
 .btn-translate-full.loading { opacity: .6; pointer-events: none; }
 
+.vocab-progress {
+  display: inline-block;
+  margin-left: 12px;
+  font-size: .82rem;
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+
 /* ─── 文章内容 — 可点击单词 ─── */
 .article-content {
   font-size: 1.1rem;
